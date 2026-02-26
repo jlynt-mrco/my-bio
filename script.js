@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initSkillsSlider();
     initSmoothScroll();
     initParallax();
+    initCardEffects();
 });
 
 // ===================== LOADER =====================
@@ -120,7 +121,7 @@ function initTyped() {
     }
     
     const options = {
-        strings: ['Desainer Kreatif', 'Pengembang Web', 'Problem Solver', 'Julyant Marco'],
+        strings: ['Desainer Kreatif', 'Pengembang Web', 'Problem Solver', 'Julyant Marco M.'],
         typeSpeed: 100,
         backSpeed: 50,
         backDelay: 2000,
@@ -665,3 +666,17 @@ window.addEventListener('resize', () => {
         }
     }, 250);
 });
+
+function initCardEffects() {
+    const cards = document.querySelectorAll('.about-card');
+    
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+}
