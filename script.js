@@ -121,7 +121,7 @@ function initTyped() {
     }
     
     const options = {
-        strings: ['Desainer Kreatif', 'Pengembang Web', 'Problem Solver', 'Julyant Marco M.'],
+        strings: ['Desainer Kreatif', 'Julyant Marco M.', 'Pengembang Web', 'Problem Solver'],
         typeSpeed: 100,
         backSpeed: 50,
         backDelay: 2000,
@@ -680,3 +680,4 @@ function initCardEffects() {
         });
     });
 }
+
