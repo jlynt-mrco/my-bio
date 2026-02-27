@@ -680,4 +680,3 @@ function initCardEffects() {
         });
     });
 }
-
