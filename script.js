@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initSmoothScroll();
     initParallax();
     initCardEffects();
+    initKaryaModal();
 });
 
 // ===================== LOADER =====================
@@ -30,6 +31,7 @@ function initCursor() {
     
     if (!cursor || !follower) return;
     
+    // Track mouse position even when over modal
     document.addEventListener('mousemove', (e) => {
         cursor.style.left = e.clientX + 'px';
         cursor.style.top = e.clientY + 'px';
@@ -47,19 +49,36 @@ function initCursor() {
         follower.style.opacity = 0;
     });
     
-    const links = document.querySelectorAll('a, button, .work-item');
-    links.forEach(link => {
-        link.addEventListener('mouseenter', () => {
-            cursor.style.transform = 'scale(1.5)';
-            follower.style.transform = 'scale(1.5)';
-            follower.style.borderColor = 'var(--secondary-color)';
+    // Make cursor work on all elements including modal
+    const interactiveElements = () => document.querySelectorAll('a, button, .work-item, .modal-close, .modal-slider-arrow, .modal-slider-dot, .modal-link-item, .back-to-top');
+    
+    const addHoverEffects = () => {
+        interactiveElements().forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.transform = 'scale(1.5)';
+                follower.style.transform = 'scale(1.5)';
+                follower.style.borderColor = 'var(--secondary-color)';
+            });
+            
+            el.addEventListener('mouseleave', () => {
+                cursor.style.transform = 'scale(1)';
+                follower.style.transform = 'scale(1)';
+                follower.style.borderColor = 'var(--primary-color)';
+            });
         });
-        
-        link.addEventListener('mouseleave', () => {
-            cursor.style.transform = 'scale(1)';
-            follower.style.transform = 'scale(1)';
-            follower.style.borderColor = 'var(--primary-color)';
-        });
+    };
+    
+    // Initial add
+    addHoverEffects();
+    
+    // Re-add when modal opens (for new elements)
+    const observer = new MutationObserver(() => {
+        addHoverEffects();
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
     });
 }
 
@@ -312,7 +331,7 @@ function filterMobile(filter) {
             item.classList.remove('filtered-out');
         });
         
-        // Update dots
+        // Update dots - semua dot muncul
         if (dots.length) {
             dots.forEach(dot => {
                 dot.style.display = 'inline-block';
@@ -321,8 +340,19 @@ function filterMobile(filter) {
             });
         }
         
-        // Update active dot
-        updateMobileDots(slider, items, dots);
+        // Scroll ke awal
+        setTimeout(() => {
+            slider.scrollTo({
+                left: 0,
+                behavior: 'smooth'
+            });
+            
+            // Update active dot
+            setTimeout(() => {
+                updateMobileDots(slider, items, dots);
+            }, 300);
+        }, 100);
+        
         return;
     }
     
@@ -347,32 +377,37 @@ function filterMobile(filter) {
         slider.appendChild(item);
     });
     
-    // Terapkan styling
+    // Terapkan styling - item matched tampil normal (BESAR), unmatched mengecil
     matched.forEach(({ item }) => {
         item.style.opacity = '1';
-        item.style.transform = 'scale(1)';
+        item.style.transform = 'scale(1)'; // UKURAN NORMAL
         item.style.pointerEvents = 'auto';
         item.style.filter = 'none';
         item.classList.remove('filtered-out');
     });
     
     unmatched.forEach(({ item }) => {
-        item.style.opacity = '0.2';
-        item.style.transform = 'scale(0.8)';
+        item.style.opacity = '0.2'; // REDUP
+        item.style.transform = 'scale(0.8)'; // KECIL
         item.style.pointerEvents = 'none';
         item.style.filter = 'grayscale(1)';
         item.classList.add('filtered-out');
     });
     
-    // Update slider indicators
+    // Update dots - HANYA dot untuk item MATCHED yang muncul
     if (dots.length) {
         dots.forEach((dot, index) => {
             const item = items[index];
-            if (item && (filter === 'all' || !item.classList.contains('filtered-out'))) {
+            // Cek apakah item ini termasuk dalam matched (berdasarkan class filter)
+            const isMatched = item && item.classList.contains(filter);
+            
+            if (isMatched) {
+                // Dot untuk item matched muncul
                 dot.style.display = 'inline-block';
                 dot.style.opacity = '1';
                 dot.style.pointerEvents = 'auto';
             } else {
+                // Dot untuk item unmatched disembunyikan
                 dot.style.display = 'none';
                 dot.style.opacity = '0';
                 dot.style.pointerEvents = 'none';
@@ -380,21 +415,42 @@ function filterMobile(filter) {
         });
     }
     
-    // Scroll ke item pertama yang visible (matched item pertama)
+    // Scroll ke item pertama yang matched
     if (matched.length > 0) {
-        const firstMatchedIndex = matched[0].index;
-        const firstItem = items[firstMatchedIndex];
-        const itemWidth = firstItem.offsetWidth + 15;
         setTimeout(() => {
             slider.scrollTo({
-                left: itemWidth * 0, // Scroll ke awal slider karena matched items sudah di depan
+                left: 0, // Karena matched items sudah di depan
                 behavior: 'smooth'
             });
+            
+            // Update active dot setelah scroll
+            setTimeout(() => {
+                // Panggil updateMobileDots dengan parameter yang benar
+                if (slider && items && dots) {
+                    const updateDots = () => {
+                        const scrollLeft = slider.scrollLeft;
+                        const itemWidth = items[0]?.offsetWidth + 15 || 295;
+                        let activeIndex = Math.round(scrollLeft / itemWidth);
+                        activeIndex = Math.min(Math.max(activeIndex, 0), items.length - 1);
+                        
+                        dots.forEach((dot, index) => {
+                            dot.classList.remove('active');
+                            
+                            // Cek apakah item ini matched
+                            const isMatched = items[index] && items[index].classList.contains(filter);
+                            
+                            if (index === activeIndex && isMatched) {
+                                dot.classList.add('active');
+                            }
+                        });
+                    };
+                    
+                    slider.addEventListener('scroll', updateDots);
+                    setTimeout(updateDots, 100);
+                }
+            }, 300);
         }, 100);
     }
-    
-    // Update active dot
-    updateMobileDots(slider, items, dots);
 }
 
 // Helper untuk update active dot di mobile
@@ -403,42 +459,42 @@ function updateMobileDots(slider, items, dots) {
     
     const updateDots = () => {
         const scrollLeft = slider.scrollLeft;
-        const visible = [];
+        const itemWidth = items[0]?.offsetWidth + 15 || 295;
         
-        items.forEach((item, index) => {
-            if (!item.classList.contains('filtered-out')) {
-                visible.push(index);
-            }
-        });
+        // Hitung index berdasarkan scroll position
+        let activeIndex = Math.round(scrollLeft / itemWidth);
+        activeIndex = Math.min(Math.max(activeIndex, 0), items.length - 1);
         
-        if (!visible.length) return;
-        
-        const firstItem = items[visible[0]];
-        const itemWidth = firstItem.offsetWidth + 15;
-        
-        let activeIndex = visible[0];
-        for (let i = 0; i < visible.length; i++) {
-            const idx = visible[i];
-            const left = idx * itemWidth;
-            if (scrollLeft >= left - itemWidth / 2) {
-                activeIndex = idx;
-            }
-        }
-        
+        // Update setiap dot
         dots.forEach((dot, index) => {
             dot.classList.remove('active');
-            if (index === activeIndex && !items[index].classList.contains('filtered-out')) {
+            
+            // Cek apakah item visible (tidak difilter-out)
+            const isVisible = items[index] && !items[index].classList.contains('filtered-out');
+            
+            // Set visibility berdasarkan class filtered-out
+            if (isVisible) {
+                dot.style.display = 'inline-block';
+                dot.style.opacity = '1';
+                dot.style.pointerEvents = 'auto';
+            } else {
+                dot.style.display = 'none';
+                dot.style.opacity = '0';
+                dot.style.pointerEvents = 'none';
+            }
+            
+            // Set active jika index sesuai dan visible
+            if (index === activeIndex && isVisible) {
                 dot.classList.add('active');
             }
         });
     };
     
     // Hapus event listener lama
-    const newSlider = slider.cloneNode(true);
-    slider.parentNode.replaceChild(newSlider, slider);
+    slider.removeEventListener('scroll', updateDots);
     
     // Tambah event listener baru
-    newSlider.addEventListener('scroll', updateDots);
+    slider.addEventListener('scroll', updateDots);
     
     // Trigger sekali
     setTimeout(updateDots, 100);
@@ -480,7 +536,7 @@ function initSkillsSlider() {
                 // Default ke 'all'
                 filterMobile('all');
             }
-        }, 300);
+        }, 500);
         
     } else {
         // Mode desktop
@@ -565,10 +621,9 @@ function createMobileSlider(skillsSection, skillsItems) {
             const index = parseInt(this.getAttribute('data-index'));
             const slider = document.querySelector('.skills-slider');
             const items = document.querySelectorAll('.skill-item');
-            const firstItem = items[0];
             
-            if (slider && firstItem) {
-                const itemWidth = firstItem.offsetWidth + 15;
+            if (slider && items[index] && !items[index].classList.contains('filtered-out')) {
+                const itemWidth = items[index].offsetWidth + 15;
                 slider.scrollTo({
                     left: itemWidth * index,
                     behavior: 'smooth'
@@ -588,6 +643,18 @@ function createMobileSlider(skillsSection, skillsItems) {
     } else {
         skillsSection.querySelector('.container').appendChild(sliderContainer);
     }
+    
+    // Inisialisasi scroll event listener untuk update dot
+    setTimeout(() => {
+        const newSlider = document.querySelector('.skills-slider');
+        const newDots = document.querySelectorAll('.slider-dot');
+        const newItems = document.querySelectorAll('.skill-item');
+        
+        if (newSlider && newDots.length) {
+            // Panggil updateMobileDots
+            updateMobileDots(newSlider, newItems, newDots);
+        }
+    }, 300);
     
     console.log('Slider created with', skillsItems.length, 'items');
 }
@@ -632,7 +699,7 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
         initSkillsSlider();
-        
+
         const activeFilter = document.querySelector('.skills-filters .filter-btn.active');
         if (activeFilter) {
             const filter = activeFilter.getAttribute('data-filter');
@@ -680,3 +747,253 @@ function initCardEffects() {
         });
     });
 }
+
+// ===================== MODAL KARYA =====================
+
+function initKaryaModal() {
+    const modal = document.getElementById('karyaModal');
+    const closeBtn = document.getElementById('modalClose');
+    const workGrid = document.querySelector('.work-grid');
+    
+    if (!modal || !workGrid) return;
+    
+    // Generate work items dari data
+    generateWorkItems();
+    
+    // Event listener untuk work items
+    document.querySelectorAll('.work-link').forEach((link, index) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const karya = karyaData[index];
+            if (karya) {
+                openModal(karya);
+            }
+        });
+    });
+    
+    // Close modal
+    closeBtn.addEventListener('click', closeModal);
+    
+    // Click outside to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // ESC key to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+}
+
+// Generate work items dari data
+function generateWorkItems() {
+    const workGrid = document.querySelector('.work-grid');
+    if (!workGrid) return;
+    
+    workGrid.innerHTML = '';
+    
+    karyaData.forEach((karya, index) => {
+        const workItem = document.createElement('div');
+        workItem.className = 'work-item';
+        workItem.setAttribute('data-aos', 'fade-up');
+        workItem.setAttribute('data-aos-delay', 100 * (index % 3));
+        
+        workItem.innerHTML = `
+            <div class="work-image">
+                <img src="${karya.media[0]?.src || 'https://placehold.co/600x400/2a2a2a/ffffff?text=' + encodeURIComponent(karya.title)}" alt="${karya.title}">
+                <div class="work-overlay">
+                    <h3>${karya.title}</h3>
+                    <p>${karya.category}</p>
+                    <a href="#" class="work-link" data-id="${karya.id}"><i class="fas fa-external-link-alt"></i></a>
+                </div>
+            </div>
+        `;
+        
+        workGrid.appendChild(workItem);
+    });
+}
+
+// Open modal dengan data karya
+function openModal(karya) {
+    const modal = document.getElementById('karyaModal');
+    if (!modal) return;
+    
+    // Set content
+    document.getElementById('modalTitle').textContent = karya.title;
+    document.getElementById('modalCategory').textContent = karya.category;
+    document.getElementById('modalDescription').textContent = karya.description;
+    
+    // Set main link
+    const mainLinkDiv = document.getElementById('modalMainLink');
+    if (karya.mainLink) {
+        mainLinkDiv.innerHTML = `
+            <a href="${karya.mainLink.url}" target="_blank" rel="noopener noreferrer">
+                <i class="fas fa-globe"></i> ${karya.mainLink.text}
+            </a>
+        `;
+    } else {
+        mainLinkDiv.innerHTML = '';
+    }
+    
+    // Set additional links
+    const linksGrid = document.getElementById('modalLinksGrid');
+    if (karya.links && karya.links.length > 0) {
+        linksGrid.innerHTML = karya.links.map(link => `
+            <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="modal-link-item">
+                <i class="${link.icon}"></i> ${link.text}
+            </a>
+        `).join('');
+        document.querySelector('#modalLinks').style.display = 'block';
+    } else {
+        document.querySelector('#modalLinks').style.display = 'none';
+    }
+    
+    // Set media
+    initModalSlider(karya.media);
+    
+    // Show modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // FORCE CURSOR TO SHOW - tambahkan class khusus
+    document.body.classList.add('modal-open');
+    
+    // Refresh cursor position
+    setTimeout(() => {
+        const cursor = document.querySelector('.cursor');
+        const follower = document.querySelector('.cursor-follower');
+        if (cursor && follower) {
+            cursor.style.opacity = '1';
+            follower.style.opacity = '1';
+        }
+    }, 100);
+}
+
+// Close modal
+function closeModal() {
+    const modal = document.getElementById('karyaModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Hapus class modal-open
+    document.body.classList.remove('modal-open');
+    
+    // Destroy slider
+    const mediaContainer = document.getElementById('modalMediaContainer');
+    mediaContainer.innerHTML = '';
+    
+    // Pastikan cursor kembali normal
+    const cursor = document.querySelector('.cursor');
+    const follower = document.querySelector('.cursor-follower');
+    if (cursor && follower) {
+        cursor.style.opacity = '1';
+        follower.style.opacity = '1';
+        cursor.style.transform = 'scale(1)';
+        follower.style.transform = 'scale(1)';
+    }
+}
+
+// Close modal
+function closeModal() {
+    const modal = document.getElementById('karyaModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Destroy slider
+    const mediaContainer = document.getElementById('modalMediaContainer');
+    mediaContainer.innerHTML = '';
+}
+
+// Initialize modal slider
+function initModalSlider(media) {
+    const container = document.getElementById('modalMediaContainer');
+    const dotsContainer = document.getElementById('modalSliderDots');
+    const counter = document.getElementById('modalMediaCounter');
+    const prevBtn = document.getElementById('modalPrevSlide');
+    const nextBtn = document.getElementById('modalNextSlide');
+    
+    let currentIndex = 0;
+    
+    // Generate media items
+    container.innerHTML = media.map((item, index) => {
+        if (item.type === 'video') {
+            return `
+                <div class="modal-media-item" data-index="${index}">
+                    <iframe src="${item.src}" frameborder="0" allowfullscreen></iframe>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="modal-media-item" data-index="${index}">
+                    <img src="${item.src}" alt="Media ${index + 1}">
+                </div>
+            `;
+        }
+    }).join('');
+    
+    // Generate dots
+    if (media.length > 1) {
+        dotsContainer.innerHTML = media.map((_, index) => `
+            <span class="modal-slider-dot ${index === 0 ? 'active' : ''}" data-index="${index}"></span>
+        `).join('');
+        
+        // Show controls
+        prevBtn.style.display = 'flex';
+        nextBtn.style.display = 'flex';
+        dotsContainer.style.display = 'flex';
+        
+        // Event listeners for dots
+        dotsContainer.querySelectorAll('.modal-slider-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                const index = parseInt(dot.dataset.index);
+                goToSlide(index);
+            });
+        });
+        
+        // Event listeners for arrows
+        prevBtn.onclick = () => {
+            if (currentIndex > 0) {
+                goToSlide(currentIndex - 1);
+            }
+        };
+        
+        nextBtn.onclick = () => {
+            if (currentIndex < media.length - 1) {
+                goToSlide(currentIndex + 1);
+            }
+        };
+        
+        // Update counter
+        counter.textContent = `${currentIndex + 1} / ${media.length}`;
+        
+    } else {
+        // Hide controls if only one media
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+        dotsContainer.style.display = 'none';
+        counter.textContent = '1 / 1';
+    }
+    
+    // Function to go to specific slide
+    function goToSlide(index) {
+        if (index < 0 || index >= media.length) return;
+        
+        currentIndex = index;
+        
+        // Update transform
+        container.style.transform = `translateX(-${currentIndex * 100}%)`;
+        
+        // Update dots
+        document.querySelectorAll('.modal-slider-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === currentIndex);
+        });
+        
+        // Update counter
+        counter.textContent = `${currentIndex + 1} / ${media.length}`;
+    }
+}
+
