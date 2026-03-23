@@ -1,15 +1,3 @@
-// ===================== DATA KARYA =====================
-// File ini berisi semua data karya untuk ditampilkan di modal
-// Format: 
-//   id: unik untuk setiap karya
-//   title: judul karya
-//   category: kategori (Web Development, UI/UX, Branding, dll)
-//   mainLink: url utama website/proyek
-//   links: array link tambahan (github, demo, dll)
-//   description: deskripsi lengkap karya
-//   media: array foto/video (video harus embed YouTube/Vimeo)
-//   type: 'image' atau 'video'
-
 const karyaData = [
     {
         id: 1,
