@@ -20,7 +20,7 @@ const karyaData = [
             url: "https://balongsariedufarm.com/"
         },
         
-        links: [
+        /*links: [
             {
                 text: "GitHub Repository",
                 url: "https://github.com/jlynt-mrco/ecommerce-app",
@@ -31,7 +31,7 @@ const karyaData = [
                 url: "https://demo.example.com",
                 icon: "fas fa-external-link-alt"
             }
-        ],
+        ]*/,
         description: `Website E-Commerce Balongsari Edufarm merupakan proyek pengembangan platform jual beli online yang dibuat 
             dalam rangka mendukung program BEM Berdampak UNIM 2025 di Desa Balongsari, Mojokerto. Desa Balongsari memiliki
             potensi pertanian yang baik dengan hasil kebun berupa berbagai jenis sayuran segar. Namun, sistem penjualannya 
