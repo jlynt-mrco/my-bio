@@ -322,8 +322,8 @@ Dikembangkan oleh Julyant Marco`,
             }
             // Hanya 1 foto, tidak akan muncul tombol slide
         ]
-    }
-];*/
+    }*/
+];
 
 // Fungsi untuk mendapatkan data karya berdasarkan ID
 function getKaryaById(id) {
